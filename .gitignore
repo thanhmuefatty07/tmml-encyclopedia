@@ -1,0 +1,87 @@
+# LaTeX build artifacts
+*.aux
+*.log
+*.out
+*.toc
+*.fdb_latexmk
+*.fls
+*.synctex.gz
+*.bbl
+*.blg
+*.idx
+*.ind
+*.ilg
+*.lot
+*.lof
+*.nav
+*.snm
+*.vrb
+*.xdv
+*.figlist
+*.makefile
+*.figlist
+*.makefile.fls
+*.makefile.fdb_latexmk
+
+# Build directories
+build/
+dist/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Editor files
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.env
+.venv
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# Local development
+.local/
+.cache/
+
+# Node.js (if using any JS tools)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Archives
+*.zip
+*.tar.gz
+*.rar
+*.7z
+
+# Exclude final built PDFs from versioning (use LFS instead)
+# Uncomment if you want to exclude built PDFs
+# *.pdf
+
+# Keep structure but ignore content of some directories
+releases/.gitkeep
+!releases/.gitkeep
