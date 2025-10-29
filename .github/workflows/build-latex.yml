@@ -1,0 +1,100 @@
+name: Build TMML Encyclopedia
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths: [ 'src/latex/**', 'docs/pdfs/**' ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-pdf:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        lfs: true
+        
+    - name: Setup TeX Live
+      uses: teatimeguest/setup-texlive-action@v3
+      with:
+        packages: |
+          scheme-full
+          
+    - name: Install additional packages
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y qpdf pdftk-java
+        
+    - name: Build Encyclopedia
+      run: |
+        cd src/latex
+        # Build twice for stable TOC and cross-references
+        latexmk -xelatex TMML_Encyclopedia_OPTIMIZED.tex
+        latexmk -xelatex TMML_Encyclopedia_OPTIMIZED.tex
+        
+    - name: Validate PDF
+      run: |
+        cd src/latex
+        # Check if PDF was generated and get page count
+        if [ -f "TMML_Encyclopedia_OPTIMIZED.pdf" ]; then
+          echo "✅ PDF generated successfully"
+          PAGES=$(pdfinfo TMML_Encyclopedia_OPTIMIZED.pdf | grep Pages | awk '{print $2}')
+          echo "📄 Total pages: $PAGES"
+          
+          if [ "$PAGES" -gt 900 ]; then
+            echo "✅ Page count target achieved ($PAGES pages)"
+          else
+            echo "⚠️  Page count below target ($PAGES pages)"
+          fi
+        else
+          echo "❌ PDF generation failed"
+          exit 1
+        fi
+        
+    - name: Upload PDF Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: tmml-encyclopedia-${{ github.sha }}
+        path: src/latex/*.pdf
+        retention-days: 30
+        
+    - name: Create Release (on tag)
+      if: startsWith(github.ref, 'refs/tags/v')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: src/latex/*.pdf
+        body: |
+          ## TMML Encyclopedia Release ${{ github.ref_name }}
+          
+          **Supreme System V5 - Comprehensive AI Consciousness Research**
+          
+          ### 📊 Build Information
+          - **Total Pages**: ~1000+ (check artifact for exact count)
+          - **Sessions**: 6 consolidated research sessions
+          - **Build SHA**: ${{ github.sha }}
+          - **Build Date**: ${{ github.run_date }}
+          
+          ### 📚 Content Overview
+          - Session 1: Foundation Research (3 chapters)
+          - Session 2: Core Systems (2 chapters) 
+          - Session 3: Supporting Materials (7 chapters)
+          - Session 4: Advanced Research (6 chapters)
+          - Session 5: Implementation & Architecture (5 chapters)
+          - Session 6: Professional Enhancement & QA (6 chapters)
+          
+          ### 🔧 Technical Specifications
+          - **LaTeX Engine**: XeLaTeX with Unicode support
+          - **Format**: A4, professional binding ready
+          - **Quality**: Publication-grade research compendium
+          
+          ### 📖 How to Use
+          1. Download the PDF attachment below
+          2. PDF is fully bookmarked and searchable
+          3. Compatible with all PDF readers
+          4. Recommended for academic reference and research
+          
+          **Built with ❤️ by the Supreme System V5 Research Team**
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
