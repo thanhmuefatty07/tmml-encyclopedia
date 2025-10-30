@@ -1,0 +1,50 @@
+name: Build TMML Encyclopedia (Clean)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths: [ 'src/latex/**', 'docs/pdfs/**' ]
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  build-pdf:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        lfs: true
+
+    - name: TeX Live
+      uses: teatimeguest/setup-texlive-action@v3
+      with:
+        packages: |
+          scheme-full
+
+    - name: Linux deps
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y poppler-utils qpdf
+
+    - name: Build
+      working-directory: src/latex
+      run: |
+        latexmk -xelatex TMML_Encyclopedia_OPTIMIZED.tex
+        latexmk -xelatex TMML_Encyclopedia_OPTIMIZED.tex
+
+    - name: Validate
+      working-directory: src/latex
+      run: |
+        test -f TMML_Encyclopedia_OPTIMIZED.pdf || (echo "PDF not found" && exit 1)
+        pdfinfo TMML_Encyclopedia_OPTIMIZED.pdf || true
+
+    - name: Upload artifact (v4)
+      uses: actions/upload-artifact@v4
+      with:
+        name: tmml-encyclopedia-${{ github.run_id }}
+        path: src/latex/TMML_Encyclopedia_OPTIMIZED.pdf
+        retention-days: 30
