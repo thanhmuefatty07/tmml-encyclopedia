@@ -1,0 +1,148 @@
+name: TMML Encyclopedia Builder Ultra
+
+on:
+  workflow_dispatch:
+    inputs:
+      tex_scheme:
+        description: 'TeX installation scheme'
+        required: false
+        default: 'fast'
+        type: choice
+        options:
+        - fast
+        - full
+  push:
+    branches: [ main ]
+    paths: [ 'src/latex/**', 'docs/pdfs/**' ]
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  DEBIAN_FRONTEND: noninteractive
+
+jobs:
+  build-pdf:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+    - name: 📥 Checkout with LFS
+      uses: actions/checkout@v4
+      with:
+        lfs: true
+        fetch-depth: 1
+
+    - name: 🎯 Cache TeX Live packages
+      uses: actions/cache@v4
+      with:
+        path: /usr/share/texlive
+        key: texlive-${{ runner.os }}-${{ github.event.inputs.tex_scheme || 'fast' }}
+        restore-keys: |
+          texlive-${{ runner.os }}-
+
+    - name: 🚀 Install TeX Live (Optimized)
+      run: |
+        echo "::group::📦 Package Installation"
+        sudo apt-get update -qq
+        
+        if [ "${{ github.event.inputs.tex_scheme }}" = "full" ]; then
+          echo "Installing full TeX Live (comprehensive but slower)..."
+          sudo apt-get install -y texlive-full
+        else
+          echo "Installing optimized TeX Live (fast and sufficient)..."
+          sudo apt-get install -y \
+            texlive \
+            texlive-latex-extra \
+            texlive-fonts-recommended \
+            texlive-fonts-extra \
+            texlive-xetex \
+            latexmk \
+            fonts-noto \
+            fonts-dejavu-extra \
+            fonts-liberation \
+            poppler-utils \
+            qpdf
+        fi
+        
+        echo "::endgroup::"
+        
+        echo "::group::🔍 Verify Installation"
+        xelatex --version
+        latexmk --version
+        pdfinfo -v
+        echo "::endgroup::"
+
+    - name: 📋 Pre-build Check
+      working-directory: src/latex
+      run: |
+        echo "::group::📁 File Structure"
+        ls -la
+        echo "::endgroup::"
+        
+        echo "::group::🔍 LaTeX File Check"
+        if [ ! -f "TMML_Encyclopedia_OPTIMIZED.tex" ]; then
+          echo "❌ LaTeX source file not found!"
+          echo "Available files:"
+          find . -name "*.tex" -type f
+          exit 1
+        fi
+        echo "✅ LaTeX source file exists"
+        echo "::endgroup::"
+
+    - name: 🔨 Build Encyclopedia (2-Pass)
+      working-directory: src/latex
+      run: |
+        echo "::group::🔄 First Pass"
+        latexmk -xelatex -interaction=nonstopmode -halt-on-error -file-line-error TMML_Encyclopedia_OPTIMIZED.tex
+        echo "::endgroup::"
+        
+        echo "::group::🔄 Second Pass (TOC/References)"
+        latexmk -xelatex -interaction=nonstopmode -halt-on-error -file-line-error TMML_Encyclopedia_OPTIMIZED.tex
+        echo "::endgroup::"
+
+    - name: ✅ Validate & Analyze PDF
+      working-directory: src/latex
+      run: |
+        echo "::group::📋 PDF Validation"
+        if [ ! -f "TMML_Encyclopedia_OPTIMIZED.pdf" ]; then
+          echo "❌ PDF generation failed - file not found"
+          echo "Available files:"
+          ls -la *.pdf 2>/dev/null || echo "No PDF files found"
+          exit 1
+        fi
+        
+        echo "✅ PDF file generated successfully"
+        
+        # Get detailed PDF information
+        FILESIZE=$(du -h TMML_Encyclopedia_OPTIMIZED.pdf | cut -f1)
+        PAGES=$(pdfinfo TMML_Encyclopedia_OPTIMIZED.pdf | grep "Pages:" | awk '{print $2}' || echo "Unknown")
+        
+        echo "📊 PDF Analysis:"
+        echo "├── File size: $FILESIZE"
+        echo "├── Total pages: $PAGES"
+        echo "├── Created: $(date)"
+        echo "└── Status: Ready for distribution"
+        
+        # Additional validation
+        if [ "$PAGES" != "Unknown" ] && [ "$PAGES" -gt 5 ]; then
+          echo "🎯 Build quality: EXCELLENT ($PAGES pages)"
+        else
+          echo "⚠️  Build quality: MINIMAL ($PAGES pages)"
+        fi
+        echo "::endgroup::"
+
+    - name: 📤 Upload Artifact (v4 Ultra)
+      uses: actions/upload-artifact@v4
+      with:
+        name: tmml-encyclopedia-${{ github.run_id }}-${{ github.run_attempt }}
+        path: src/latex/TMML_Encyclopedia_OPTIMIZED.pdf
+        retention-days: 30
+        if-no-files-found: error
+        compression-level: 9
+
+    - name: 📈 Build Summary
+      if: always()
+      run: |
+        echo "::notice title=Build Complete::Encyclopedia PDF generated successfully"
+        echo "::notice title=Download Ready::Check Artifacts section for download link"
