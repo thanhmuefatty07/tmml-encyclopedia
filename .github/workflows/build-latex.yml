@@ -58,7 +58,7 @@ jobs:
         fi
         
     - name: Upload PDF Artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: tmml-encyclopedia-${{ github.sha }}
         path: src/latex/*.pdf
